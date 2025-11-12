@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Play, RefreshCw, CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
+import { Play, RefreshCw, CheckCircle2, XCircle, Clock, AlertCircle, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { AutomationStatus, MergeLog, Configuration, ManualTriggerResponse } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";

@@ -10,17 +10,28 @@ export function startScheduler() {
       scheduledTask.stop();
     }
 
-    scheduledTask = cron.schedule(config.cronSchedule, async () => {
-      console.log(`[Scheduler] Running automated blog PR merge at ${new Date().toISOString()}`);
-      try {
-        const logs = await runAutomation();
-        console.log(`[Scheduler] Automation completed. Generated ${logs.length} log entries`);
-      } catch (error) {
-        console.error(`[Scheduler] Automation failed:`, error);
+    try {
+      if (!cron.validate(config.cronSchedule)) {
+        console.error(`[Scheduler] Invalid cron schedule: ${config.cronSchedule}`);
+        return;
       }
-    });
 
-    console.log(`[Scheduler] Started with schedule: ${config.cronSchedule}`);
+      scheduledTask = cron.schedule(config.cronSchedule, async () => {
+        console.log(`[Scheduler] Running automated blog PR merge at ${new Date().toISOString()}`);
+        try {
+          const logs = await runAutomation();
+          console.log(`[Scheduler] Automation completed. Generated ${logs.length} log entries`);
+        } catch (error) {
+          console.error(`[Scheduler] Automation failed:`, error);
+        }
+      });
+
+      console.log(`[Scheduler] Started with schedule: ${config.cronSchedule}`);
+    } catch (error) {
+      console.error(`[Scheduler] Failed to start scheduler:`, error);
+    }
+  }).catch(error => {
+    console.error(`[Scheduler] Failed to get config:`, error);
   });
 }
 
@@ -29,26 +40,14 @@ export function restartScheduler() {
   startScheduler();
 }
 
-export function getNextScheduledRun(cronSchedule: string): Date | null {
+export async function getNextScheduledRun(cronSchedule: string): Promise<Date | null> {
   try {
-    const task = cron.schedule(cronSchedule, () => {});
-    const now = new Date();
-    
-    const parts = cronSchedule.split(' ');
-    if (parts.length !== 5) return null;
-    
-    const [minute, hour] = parts;
-    const nextRun = new Date(now);
-    nextRun.setHours(parseInt(hour), parseInt(minute), 0, 0);
-    
-    if (nextRun <= now) {
-      nextRun.setDate(nextRun.getDate() + 1);
-    }
-    
-    task.stop();
-    return nextRun;
+    const parser = require("cron-parser");
+    const interval = parser.parseExpression(cronSchedule);
+    const next = interval.next();
+    return next.toDate();
   } catch (error) {
-    console.error("[Scheduler] Failed to calculate next run:", error);
+    console.error("[Scheduler] Failed to parse cron schedule:", error);
     return null;
   }
 }

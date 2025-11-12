@@ -10,7 +10,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const state = await storage.getAutomationState();
       const config = await storage.getConfig();
-      const nextRun = getNextScheduledRun(config.cronSchedule);
+      const nextRun = await getNextScheduledRun(config.cronSchedule);
 
       const status: AutomationStatus = {
         isRunning: state.isRunning,

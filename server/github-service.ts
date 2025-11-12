@@ -3,7 +3,7 @@ import { Octokit } from '@octokit/rest';
 let connectionSettings: any;
 
 async function getAccessToken() {
-  if (connectionSettings && connectionSettings.settings.expires_at && new Date(connectionSettings.settings.expires_at).getTime() > Date.now()) {
+  if (connectionSettings?.settings?.expires_at && new Date(connectionSettings.settings.expires_at).getTime() > Date.now()) {
     return connectionSettings.settings.access_token;
   }
   
@@ -15,24 +15,40 @@ async function getAccessToken() {
     : null;
 
   if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
+    throw new Error('Authentication token not available. Please ensure the app is running in a Replit environment.');
   }
 
-  connectionSettings = await fetch(
-    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=github',
-    {
-      headers: {
-        'Accept': 'application/json',
-        'X_REPLIT_TOKEN': xReplitToken
-      }
-    }
-  ).then(res => res.json()).then(data => data.items?.[0]);
+  if (!hostname) {
+    throw new Error('Replit connectors hostname not configured.');
+  }
 
-  const accessToken = connectionSettings?.settings?.access_token || connectionSettings.settings?.oauth?.credentials?.access_token;
+  try {
+    const response = await fetch(
+      'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=github',
+      {
+        headers: {
+          'Accept': 'application/json',
+          'X_REPLIT_TOKEN': xReplitToken
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch GitHub connection: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    connectionSettings = data.items?.[0];
+  } catch (error) {
+    throw new Error(`Failed to retrieve GitHub connection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+
+  const accessToken = connectionSettings?.settings?.access_token || connectionSettings?.settings?.oauth?.credentials?.access_token;
 
   if (!connectionSettings || !accessToken) {
-    throw new Error('GitHub not connected');
+    throw new Error('GitHub connector not configured. Please set up the GitHub integration in Replit.');
   }
+  
   return accessToken;
 }
 
